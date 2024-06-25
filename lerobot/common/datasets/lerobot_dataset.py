@@ -137,6 +137,8 @@ class LeRobotDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = self.hf_dataset[idx]
+        # if None is returned, it means that the requested frame is not accepted
+        # in the dataset, so we need to try another one, by randomly selecting
         while True:
             if self.delta_timestamps is not None:
                 item = load_previous_and_future_frames(
@@ -163,7 +165,6 @@ class LeRobotDataset(torch.utils.data.Dataset):
             if item is not None:
                 break
             else:
-                # idx = (idx + 1) % len(self)
                 idx_ran = randrange(len(self))
                 item = self.hf_dataset[idx_ran]
 
