@@ -8,24 +8,27 @@ from pathlib import Path
 import gym_pusht  # noqa: F401
 import gymnasium as gym
 import imageio
-import numpy
+import numpy as np
 import torch
 from huggingface_hub import snapshot_download
 
 from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
+from lerobot.common.policies.act.modeling_act import ACTPolicy
+# import custom environment
+import gym_lowcostrobot
 
 # Create a directory to store the video of the evaluation
-output_directory = Path("outputs/eval/example_pusht_diffusion")
+output_directory = Path("outputs/eval/lowcostrobot_liftcube_act")
 output_directory.mkdir(parents=True, exist_ok=True)
 
 device = torch.device("cuda")
 
 # Download the diffusion policy for pusht environment
-pretrained_policy_path = Path(snapshot_download("lerobot/diffusion_pusht"))
+# pretrained_policy_path = Path(snapshot_download("lerobot/diffusion_pusht"))
 # OR uncomment the following to evaluate a policy from the local outputs/train folder.
-# pretrained_policy_path = Path("outputs/train/example_pusht_diffusion")
+pretrained_policy_path = Path("outputs/train/2024-06-21/17-12-04_gym-lowcostrobot_act_default/checkpoints/last/pretrained_model")
 
-policy = DiffusionPolicy.from_pretrained(pretrained_policy_path)
+policy = ACTPolicy.from_pretrained(pretrained_policy_path)
 policy.eval()
 policy.to(device)
 
@@ -33,9 +36,11 @@ policy.to(device)
 # an image of the scene and state/position of the agent. The environment
 # also automatically stops running after 300 interactions/steps.
 env = gym.make(
-    "gym_pusht/PushT-v0",
-    obs_type="pixels_agent_pos",
-    max_episode_steps=300,
+    "LiftCube-v0",
+    disable_env_checker=True, 
+    observation_mode="both",
+    action_mode="ee",
+    render_mode="rgb_array",
 )
 
 # Reset the policy and environmens to prepare for rollout
@@ -54,27 +59,35 @@ step = 0
 done = False
 while not done:
     # Prepare observation for the policy running in Pytorch
-    state = torch.from_numpy(numpy_observation["agent_pos"])
-    image = torch.from_numpy(numpy_observation["pixels"])
+    state = torch.from_numpy(np.concatenate(
+                    [np.array(numpy_observation["arm_qpos"]), np.array(numpy_observation["arm_qvel"]), np.array(numpy_observation["object_qpos"])],
+                ))
+    image_front = torch.from_numpy(numpy_observation["image_front"])
+    image_top = torch.from_numpy(numpy_observation["image_top"])
 
     # Convert to float32 with image from channel first in [0,255]
     # to channel last in [0,1]
     state = state.to(torch.float32)
-    image = image.to(torch.float32) / 255
-    image = image.permute(2, 0, 1)
+    image_front = image_front.to(torch.float32) / 255
+    image_front = image_front.permute(2, 0, 1)
+    image_top = image_top.to(torch.float32) / 255
+    image_top = image_top.permute(2, 0, 1)
 
     # Send data tensors from CPU to GPU
     state = state.to(device, non_blocking=True)
-    image = image.to(device, non_blocking=True)
+    image_front = image_front.to(device, non_blocking=True)
+    image_top = image_top.to(device, non_blocking=True)
 
     # Add extra (empty) batch dimension, required to forward the policy
     state = state.unsqueeze(0)
-    image = image.unsqueeze(0)
+    image_front = image_front.unsqueeze(0)
+    image_top = image_top.unsqueeze(0)
 
     # Create the policy input dictionary
     observation = {
         "observation.state": state,
-        "observation.image": image,
+        "observation.images.front": image_front,
+        "observation.images.top": image_top,
     }
 
     # Predict the next action with respect to the current observation
@@ -97,16 +110,19 @@ while not done:
     done = terminated | truncated | done
     step += 1
 
-if terminated:
+# if terminated:
+if info["is_success"]:
     print("Success!")
 else:
     print("Failure!")
 
 # Get the speed of environment (i.e. its number of frames per second).
 fps = env.metadata["render_fps"]
+# fps = 50
+env.close() # close the rendering window
 
 # Encode all frames into a mp4 video.
 video_path = output_directory / "rollout.mp4"
-imageio.mimsave(str(video_path), numpy.stack(frames), fps=fps)
+imageio.mimsave(str(video_path), np.stack(frames), fps=fps)
 
 print(f"Video of the evaluation is available in '{video_path}'.")

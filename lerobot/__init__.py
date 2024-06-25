@@ -56,6 +56,7 @@ available_tasks_per_env = {
     "pusht": ["PushT-v0"],
     "xarm": ["XarmLift-v0"],
     "dora_aloha_real": ["DoraAloha-v0", "DoraKoch-v0", "DoraReachy2-v0"],
+    "lowcostrobot": ["LiftCube-v0"],
 }
 available_envs = list(available_tasks_per_env.keys())
 
@@ -98,6 +99,7 @@ available_datasets_per_env = {
         "lerobot/aloha_static_vinh_cup_left",
         "lerobot/aloha_static_ziploc_slide",
     ],
+    "lowcostrobot":["KeWangRobotics/LiftCube"],
 }
 
 available_real_world_datasets = [
@@ -142,6 +144,7 @@ available_policies_per_env = {
     "pusht": ["diffusion"],
     "xarm": ["tdmpc"],
     "dora_aloha_real": ["act_real"],
+    "lowcostrobot": ["act_lowcostrobot"],
 }
 
 env_task_pairs = [(env, task) for env, tasks in available_tasks_per_env.items() for task in tasks]

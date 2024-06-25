@@ -75,6 +75,43 @@ from lerobot.common.policies.utils import get_device_from_parameters
 from lerobot.common.utils.io_utils import write_video
 from lerobot.common.utils.utils import get_safe_torch_device, init_hydra_config, init_logging, set_global_seed
 
+def preprocess_observation_lowcostrobot(observations: dict[str, np.ndarray]) -> dict[str, Tensor]:
+    """Convert environment observation to LeRobot format observation.
+    Args:
+        observation: Dictionary of observation batches from a Gym vector environment.
+    Returns:
+        Dictionary of observation batches with keys renamed to LeRobot format and values as tensors.
+    """
+    # map to expected inputs for the policy
+    return_observations = {}
+
+    # imgs = {f"observation.images.{key}": img for key, img in observations["image_"].items()}
+    imgs = {"observation.images.front": observations["image_front"], "observation.images.top": observations["image_top"]}
+
+    for imgkey, img in imgs.items():
+        img = torch.from_numpy(img)
+
+        # sanity check that images are channel last
+        _, h, w, c = img.shape
+        assert c < h and c < w, f"expect channel first images, but instead {img.shape}"
+
+        # sanity check that images are uint8
+        assert img.dtype == torch.uint8, f"expect torch.uint8, but instead {img.dtype=}"
+
+        # convert to channel first of type float32 in range [0,1]
+        img = einops.rearrange(img, "b h w c -> b c h w").contiguous()
+        img = img.type(torch.float32)
+        img /= 255
+
+        return_observations[imgkey] = img
+
+    # TODO(rcadene): enable pixels only baseline with `obs_type="pixels"` in environment by removing
+    # requirement for "agent_pos"
+    return_observations["observation.state"] = torch.from_numpy(np.concatenate(
+                    [np.array(observations["arm_qpos"]), np.array(observations["arm_qvel"]), np.array(observations["object_qpos"])],
+                    axis=1)).float()
+
+    return return_observations
 
 def rollout(
     env: gym.vector.VectorEnv,
@@ -144,7 +181,9 @@ def rollout(
     )
     while not np.all(done):
         # Numpy array to tensor and changing dictionary keys to LeRobot policy format.
-        observation = preprocess_observation(observation)
+        # c
+        # observation = preprocess_observation(observation)
+        observation = preprocess_observation_lowcostrobot(observation)
         if return_observations:
             all_observations.append(deepcopy(observation))
 
@@ -385,7 +424,7 @@ def eval_policy(
     # Wait till all video rendering threads are done.
     for thread in threads:
         thread.join()
-
+    
     # Compile eval info.
     info = {
         "per_episode": [
@@ -414,7 +453,6 @@ def eval_policy(
             "eval_ep_s": (time.time() - start) / n_episodes,
         },
     }
-
     if return_episode_data:
         info["episodes"] = episode_data
 
@@ -544,7 +582,17 @@ def main(
     log_output_dir(out_dir)
 
     logging.info("Making environment.")
-    env = make_env(hydra_cfg)
+    # env = make_env(hydra_cfg)
+    import gym_lowcostrobot
+    gym_handle = "LiftCube-v0"
+    env_cls = gym.vector.SyncVectorEnv
+    env = env_cls(
+        [
+            lambda: gym.make(gym_handle, disable_env_checker=True, observation_mode="both", action_mode="ee", render_mode="rgb_array")
+            for _ in range(hydra_cfg.eval.n_episodes)
+        ]
+    )
+
 
     logging.info("Making policy.")
     if hydra_cfg_path is None:
@@ -568,7 +616,6 @@ def main(
             enable_inner_progbar=True,
         )
     print(info["aggregated"])
-
     # Save info
     with open(Path(out_dir) / "eval_info.json", "w") as f:
         json.dump(info, f, indent=2)

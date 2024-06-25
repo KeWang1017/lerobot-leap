@@ -1,0 +1,14 @@
+# @package _global_
+
+fps: 50
+
+env:
+  name: gym-lowcostrobot
+  task: LiftCube-v0
+  state_dim: 15
+  action_dim: 4
+  fps: ${fps}
+  episode_length: 200
+  # gym:
+  #   obs_type: pixels_agent_pos
+  #   render_mode: rgb_array

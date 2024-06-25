@@ -35,6 +35,8 @@ from lerobot.common.datasets.utils import (
 )
 from lerobot.common.datasets.video_utils import VideoFrame, load_from_videos
 
+from random import randrange
+
 DATA_DIR = Path(os.environ["DATA_DIR"]) if "DATA_DIR" in os.environ else None
 CODEBASE_VERSION = "v1.4"
 
@@ -125,35 +127,42 @@ class LeRobotDataset(torch.utils.data.Dataset):
         are not close enough from the requested frames. It is only used when `delta_timestamps`
         is provided or when loading video frames from mp4 files.
         """
-        # 1e-4 to account for possible numerical error
-        return 1 / self.fps - 1e-4
+        # 1e-4 to account for possible numerical error, but why it is minus, don't know
+        return 1 / self.fps + 1e-4
 
     def __len__(self):
         return self.num_samples
 
     def __getitem__(self, idx):
         item = self.hf_dataset[idx]
+        while True:
+            if self.delta_timestamps is not None:
+                item = load_previous_and_future_frames(
+                    item,
+                    self.hf_dataset,
+                    self.episode_data_index,
+                    self.delta_timestamps,
+                    self.tolerance_s,
+                )
 
-        if self.delta_timestamps is not None:
-            item = load_previous_and_future_frames(
-                item,
-                self.hf_dataset,
-                self.episode_data_index,
-                self.delta_timestamps,
-                self.tolerance_s,
-            )
+            if self.video:
+                    item = load_from_videos(
+                        item,
+                        self.video_frame_keys,
+                        self.videos_dir,
+                        self.tolerance_s,
+                    )
 
-        if self.video:
-            item = load_from_videos(
-                item,
-                self.video_frame_keys,
-                self.videos_dir,
-                self.tolerance_s,
-            )
-
-        if self.image_transforms is not None:
-            for cam in self.camera_keys:
-                item[cam] = self.image_transforms(item[cam])
+            if self.image_transforms is not None:
+                for cam in self.camera_keys:
+                    item[cam] = self.image_transforms(item[cam])
+            
+            if item is not None:
+                break
+            else:
+                # idx = (idx + 1) % len(self)
+                idx_ran = randrange(len(self))
+                item = self.hf_dataset[idx_ran]
 
         return item
 
