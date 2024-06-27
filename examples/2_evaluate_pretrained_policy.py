@@ -16,6 +16,7 @@ from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
 from lerobot.common.policies.act.modeling_act import ACTPolicy
 # import custom environment
 import gym_lowcostrobot
+import time
 
 # Create a directory to store the video of the evaluation
 output_directory = Path("outputs/eval/lowcostrobot_liftcube_act")
@@ -26,9 +27,11 @@ device = torch.device("cuda")
 # Download the diffusion policy for pusht environment
 # pretrained_policy_path = Path(snapshot_download("lerobot/diffusion_pusht"))
 # OR uncomment the following to evaluate a policy from the local outputs/train folder.
-pretrained_policy_path = Path("outputs/train/2024-06-21/17-12-04_gym-lowcostrobot_act_default/checkpoints/last/pretrained_model")
+# pretrained_policy_path = Path("outputs/train/2024-06-21/17-12-04_gym-lowcostrobot_act_default/checkpoints/last/pretrained_model")
+# policy = ACTPolicy.from_pretrained(pretrained_policy_path)
 
-policy = ACTPolicy.from_pretrained(pretrained_policy_path)
+pretrained_policy_path = Path("outputs/train/2024-06-25/17-03-40_gym-lowcostrobot_diffusion_default/checkpoints/last/pretrained_model")
+policy = DiffusionPolicy.from_pretrained(pretrained_policy_path)
 policy.eval()
 policy.to(device)
 
@@ -57,7 +60,9 @@ frames.append(env.render())
 
 step = 0
 done = False
+time_list = []
 while not done:
+    start_time = time.time()
     # Prepare observation for the policy running in Pytorch
     state = torch.from_numpy(np.concatenate(
                     [np.array(numpy_observation["arm_qpos"]), np.array(numpy_observation["arm_qvel"]), np.array(numpy_observation["object_qpos"])],
@@ -96,6 +101,8 @@ while not done:
 
     # Prepare the action for the environment
     numpy_action = action.squeeze(0).to("cpu").numpy()
+    time_duration = time.time() - start_time
+    time_list.append(time_duration)
 
     # Step through the environment and receive a new observation
     numpy_observation, reward, terminated, truncated, info = env.step(numpy_action)
@@ -116,6 +123,7 @@ if info["is_success"]:
 else:
     print("Failure!")
 
+print(f"Average time per action: {np.mean(time_list):.4f} s")
 # Get the speed of environment (i.e. its number of frames per second).
 fps = env.metadata["render_fps"]
 # fps = 50

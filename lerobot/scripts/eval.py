@@ -451,6 +451,7 @@ def eval_policy(
             "pc_success": float(np.nanmean(all_successes[:n_episodes]) * 100),
             "eval_s": time.time() - start,
             "eval_ep_s": (time.time() - start) / n_episodes,
+            "eval_ep_per_step": (time.time() - start) / (n_episodes*200),
         },
     }
     if return_episode_data:
