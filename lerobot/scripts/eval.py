@@ -107,10 +107,12 @@ def preprocess_observation_lowcostrobot(observations: dict[str, np.ndarray]) -> 
 
     # TODO(rcadene): enable pixels only baseline with `obs_type="pixels"` in environment by removing
     # requirement for "agent_pos"
+    # return_observations["observation.state"] = torch.from_numpy(np.concatenate(
+    #                 [np.array(observations["arm_qpos"]), np.array(observations["arm_qvel"]), np.array(observations["object_qpos"])],
+    #                 axis=1)).float()
     return_observations["observation.state"] = torch.from_numpy(np.concatenate(
-                    [np.array(observations["arm_qpos"]), np.array(observations["arm_qvel"]), np.array(observations["object_qpos"])],
+                    [np.array(observations["ee_pos"]), np.array(observations["gripper_qpos"]), np.array(observations["object_qpos"])],
                     axis=1)).float()
-
     return return_observations
 
 def rollout(
@@ -158,7 +160,6 @@ def rollout(
 
     # Reset the policy and environments.
     policy.reset()
-
     observation, info = env.reset(seed=seeds)
     if render_callback is not None:
         render_callback(env)
@@ -191,7 +192,6 @@ def rollout(
 
         with torch.inference_mode():
             action = policy.select_action(observation)
-
         # Convert to CPU / numpy.
         action = action.to("cpu").numpy()
         assert action.ndim == 2, "Action dimensions should be (batch, action_dim)"
