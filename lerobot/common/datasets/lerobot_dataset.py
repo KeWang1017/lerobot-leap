@@ -139,34 +139,27 @@ class LeRobotDataset(torch.utils.data.Dataset):
         item = self.hf_dataset[idx]
         # if None is returned, it means that the requested frame is not accepted
         # in the dataset, so we need to try another one, by randomly selecting
-        while True:
-            if self.delta_timestamps is not None:
-                item = load_previous_and_future_frames(
-                    item,
-                    self.hf_dataset,
-                    self.episode_data_index,
-                    self.delta_timestamps,
-                    self.tolerance_s,
-                )
+        if self.delta_timestamps is not None:
+            item = load_previous_and_future_frames(
+                item,
+                self.hf_dataset,
+                self.episode_data_index,
+                self.delta_timestamps,
+                self.tolerance_s,
+            )
 
-            if self.video:
-                item = load_from_videos(
-                    item,
-                    self.video_frame_keys,
-                    self.videos_dir,
-                    self.tolerance_s,
-                    self.video_backend,
-                )
+        if self.video:
+            item = load_from_videos(
+                item,
+                self.video_frame_keys,
+                self.videos_dir,
+                self.tolerance_s,
+                self.video_backend,
+            )
 
-            if self.image_transforms is not None:
-                for cam in self.camera_keys:
-                    item[cam] = self.image_transforms(item[cam])
-            
-            if item is not None:
-                break
-            else:
-                idx_ran = randrange(len(self))
-                item = self.hf_dataset[idx_ran]
+        if self.image_transforms is not None:
+            for cam in self.camera_keys:
+                item[cam] = self.image_transforms(item[cam])
 
         return item
 

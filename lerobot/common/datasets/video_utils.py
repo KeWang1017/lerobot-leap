@@ -49,9 +49,9 @@ def load_from_videos(
             video_path = data_dir / paths[0]
             # check if all frames are from the same video
             if len(set(paths)) > 1:
-                print("All video paths are expected to be the same for now.")
-                return None
-                # raise NotImplementedError("All video paths are expected to be the same for now.")
+                # print("All video paths are expected to be the same for now.")
+                # return None
+                raise NotImplementedError("All video paths are expected to be the same for now.")
             else:
                 frames = decode_video_frames_torchvision(video_path, timestamps, tolerance_s)
             if frames is not None:
@@ -142,19 +142,19 @@ def decode_video_frames_torchvision(
     min_, argmin_ = dist.min(1)
 
     is_within_tol = min_ < tolerance_s
-    if not is_within_tol.all():
-        print(f"One or several query timestamps unexpectedly violate the tolerance ({min_[~is_within_tol]} > {tolerance_s=})."
-            "It means that the closest frame that can be loaded from the video is too far away in time."
-        "This might be due to synchronization issues with timestamps during data collection."
-        "To be safe, we advise to ignore this item during training."
-           )
-        return None
-    # assert is_within_tol.all(), (
-    #     f"One or several query timestamps unexpectedly violate the tolerance ({min_[~is_within_tol]} > {tolerance_s=})."
-    #     "It means that the closest frame that can be loaded from the video is too far away in time."
+    # if not is_within_tol.all():
+    #     print(f"One or several query timestamps unexpectedly violate the tolerance ({min_[~is_within_tol]} > {tolerance_s=})."
+    #         "It means that the closest frame that can be loaded from the video is too far away in time."
     #     "This might be due to synchronization issues with timestamps during data collection."
     #     "To be safe, we advise to ignore this item during training."
-    # )
+    #        )
+    #     return None
+    assert is_within_tol.all(), (
+        f"One or several query timestamps unexpectedly violate the tolerance ({min_[~is_within_tol]} > {tolerance_s=})."
+        "It means that the closest frame that can be loaded from the video is too far away in time."
+        "This might be due to synchronization issues with timestamps during data collection."
+        "To be safe, we advise to ignore this item during training."
+    )
 
     # get closest frames to the query timestamps
     closest_frames = torch.stack([loaded_frames[idx] for idx in argmin_])

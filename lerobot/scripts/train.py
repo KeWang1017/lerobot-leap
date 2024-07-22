@@ -303,17 +303,7 @@ def train(cfg: DictConfig, out_dir: str | None = None, job_name: str | None = No
     eval_env = None
     if cfg.training.eval_freq > 0:
         logging.info("make_env")
-        # eval_env = make_env(cfg)
-        import gymnasium as gym
-        import gym_lowcostrobot
-        gym_handle = "LiftCube-v0"
-        env_cls = gym.vector.SyncVectorEnv
-        env = env_cls(
-            [
-                lambda: gym.make(gym_handle, disable_env_checker=True, observation_mode="both", action_mode="ee", render_mode="rgb_array")
-                for _ in range(cfg.eval.n_episodes)
-            ]
-        )
+        eval_env = make_env(cfg)
 
     logging.info("make_policy")
     policy = make_policy(
