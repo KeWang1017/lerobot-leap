@@ -50,7 +50,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from huggingface_hub import HfApi, create_branch
+from huggingface_hub import HfApi
 from safetensors.torch import save_file
 
 from lerobot.common.datasets.compute_stats import compute_stats
@@ -154,8 +154,8 @@ def push_dataset_to_hub(
     raw_dir = Path(raw_dir)
     if not raw_dir.exists():
         raise NotADirectoryError(
-            f"{raw_dir} does not exists. Check your paths or run this command to download an existing raw dataset on the hub:"
-            f"python lerobot/common/datasets/push_dataset_to_hub/_download_raw.py --raw-dir your/raw/dir --repo-id your/repo/id_raw"
+            f"{raw_dir} does not exists. Check your paths or run this command to download an existing raw dataset on the hub: "
+            f"`python lerobot/common/datasets/push_dataset_to_hub/_download_raw.py --raw-dir your/raw/dir --repo-id your/repo/id_raw`"
         )
 
     if local_dir:
@@ -216,7 +216,8 @@ def push_dataset_to_hub(
         push_meta_data_to_hub(repo_id, meta_data_dir, revision="main")
         if video:
             push_videos_to_hub(repo_id, videos_dir, revision="main")
-        create_branch(repo_id, repo_type="dataset", branch=CODEBASE_VERSION)
+        api = HfApi()
+        api.create_branch(repo_id, repo_type="dataset", branch=CODEBASE_VERSION)
 
     if tests_data_dir:
         # get the first episode
@@ -317,7 +318,10 @@ def main():
     parser.add_argument(
         "--tests-data-dir",
         type=Path,
-        help="When provided, save tests artifacts into the given directory for (e.g. `--tests-data-dir tests/data/lerobot/pusht`).",
+        help=(
+            "When provided, save tests artifacts into the given directory "
+            "(e.g. `--tests-data-dir tests/data` will save to tests/data/{--repo-id})."
+        ),
     )
 
     args = parser.parse_args()
