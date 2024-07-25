@@ -5,7 +5,7 @@ fps: 30
 env:
   name: gym-isaacsim
   task: LiftCube-v0
-  state_dim: 13
+  state_dim: 11
   action_dim: 7
   fps: ${fps}
   episode_length: 150
