@@ -5,9 +5,9 @@
 #       https://github.com/huggingface/lerobot/pull/134 for more details.
 
 seed: 100000
-dataset_repo_id: KeWangRobotics/LiftCube_IsaacSim_state_absolute_pos
+dataset_repo_id: KeWangRobotics/LiftCube_IsaacSim_absolute
 fps: 30
-steps: 25
+steps: 100
 
 override_dataset_stats:
   # TODO(rcadene, alexander-soare): should we remove image stats as well? do we use a pretrained vision model?
@@ -29,10 +29,10 @@ override_dataset_stats:
   #   max: [511.0, 511.0]
 
 training:
-  offline_steps: 060000
+  offline_steps: 80000
   online_steps: 0
   eval_freq: -1
-  save_freq: 2500
+  save_freq: 5000
   log_freq: 2500
   save_checkpoint: true
   num_workers: 8
@@ -56,7 +56,7 @@ training:
 
   # The original implementation doesn't sample frames for the last 7 steps,
   # which avoids excessive padding and leads to improved training results.
-  drop_n_last_frames: 24  # ${policy.horizon} - ${policy.n_action_steps} - ${policy.n_obs_steps} + 1
+  drop_n_last_frames: 22  # ${policy.horizon} - ${policy.n_action_steps} - ${policy.n_obs_steps} + 1
 
 eval:
   n_episodes: 50
@@ -66,9 +66,9 @@ policy:
   name: diffusion
 
   # Input / output structure.
-  n_obs_steps: 2
+  n_obs_steps: 3
   horizon: 48
-  n_action_steps: 24
+  n_action_steps: 12
 
   input_shapes:
     # TODO(rcadene, alexander-soare): add variables for height and width from the dataset/env?
@@ -91,7 +91,7 @@ policy:
   # Architecture / modeling.
   # Vision backbone.
   vision_backbone: resnet18
-  crop_shape: [200, 280]
+  crop_shape: [144, 144]
   crop_is_random: True
   pretrained_backbone_weights: null
   use_group_norm: True
@@ -103,7 +103,7 @@ policy:
   diffusion_step_embed_dim: 128 # time embedding/pos encoding dimension
   use_film_scale_modulation: True
   # Noise scheduler.
-  noise_scheduler_type: DDIM
+  noise_scheduler_type: DDPM
   num_train_timesteps: 100
   beta_schedule: squaredcos_cap_v2
   beta_start: 0.0001

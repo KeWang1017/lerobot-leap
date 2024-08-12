@@ -35,8 +35,8 @@ training:
   save_checkpoint: true
 
   batch_size: 128
-  lr: 5e-5
-  lr_backbone: 5e-5
+  lr: 2e-5
+  lr_backbone: 2e-5
   weight_decay: 1e-4
   grad_clip_norm: 10
   online_steps_between_rollouts: 1
