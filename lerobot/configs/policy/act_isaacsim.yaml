@@ -14,7 +14,7 @@
 # ```
 
 seed: 1000
-dataset_repo_id: KeWangRobotics/LiftCube_IsaacSim_state
+dataset_repo_id: KeWangRobotics/LiftCube_IsaacSim_state_absolute_pos
 
 override_dataset_stats:
   observation.images.front:
@@ -34,9 +34,9 @@ training:
   log_freq: 100
   save_checkpoint: true
 
-  batch_size: 64
-  lr: 2e-5
-  lr_backbone: 2e-5
+  batch_size: 128
+  lr: 5e-5
+  lr_backbone: 5e-5
   weight_decay: 1e-4
   grad_clip_norm: 10
   online_steps_between_rollouts: 1
@@ -62,7 +62,7 @@ policy:
     observation.images.front: [3, 240, 320]
     observation.images.wrist: [3, 240, 320]
     observation.state: ["${env.state_dim}"]
-    # observation.environment_state: [3]
+    observation.environment_state: [3]
   output_shapes:
     action: ["${env.action_dim}"]
 
@@ -71,7 +71,7 @@ policy:
     observation.images.front: mean_std
     observation.images.wrist: mean_std
     observation.state: mean_std   
-    # observation.environment_state: mean_std
+    observation.environment_state: mean_std
   output_normalization_modes:
     action: mean_std
 
@@ -102,6 +102,13 @@ policy:
   # Training and loss computation.
   dropout: 0.1
   kl_weight: 10.0
+
+  wandb:
+    enable: true
+    # Set to true to disable saving an artifact despite save_checkpoint == True
+    disable_artifact: true
+    project: lerobot
+    notes: "IsaacSim LiftCube"
 
   wandb:
     enable: true
